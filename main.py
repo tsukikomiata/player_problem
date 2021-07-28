@@ -1,12 +1,12 @@
 import sys
 
 from PyQt5.QtCore import QCoreApplication
-from PyQt5.QtWidgets import QApplication, QSlider, QMessageBox, QAction, QWidget
+from PyQt5.QtWidgets import QApplication, QSlider, QMessageBox, QAction, QWidget, QMainWindow
 from main_window import Ui_MainWindow
 from PyQt5.QtMultimedia import *
 
 
-class MainWindow(Ui_MainWindow):
+class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
 
