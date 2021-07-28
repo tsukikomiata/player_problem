@@ -1,15 +1,16 @@
 import sys
 
 from PyQt5.QtCore import QCoreApplication
-from PyQt5.QtWidgets import QApplication, QSlider, QMessageBox, QAction, QWidget, QMainWindow
+from PyQt5.QtWidgets import QApplication, QSlider, QMessageBox, QAction, QWidget, QMainWindow, QDialog
 from main_window import Ui_MainWindow
 from PyQt5.QtMultimedia import *
+from enter_yandex_music import Yam_Dialog
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
-
+        self.setupUi(self)
         # self.currentFile = '/'
         self.currentPlaylist = QMediaPlaylist()
         self.player = QMediaPlayer()
@@ -22,33 +23,24 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setWindowTitle('Music Player')
         # Add Status bar
         self.statusBar().showMessage('No Media :: %d' % self.player.volume())
-        self.homeScreen()
-
-    def homeScreen(self):
-        # Add Control Bar
-        controlBar = self.addControls()
-
-        # need to add both infoscreen and control bar to the central widget.
-        centralWidget = QWidget()
-        centralWidget.setLayout(controlBar)
-        self.setCentralWidget(centralWidget)
-        self.show()
-
-    def addControls(self):
         self.slider.setMinimum(0)
         self.slider.setMaximum(100)
         self.slider.setTracking(False)
         self.slider.sliderMoved.connect(self.seekPosition)
-
         self.playBtn.clicked.connect(self.playHandler)
         self.pauseBtn.clicked.connect(self.pauseHandler)
         self.stopBtn.clicked.connect(self.stopHandler)
         self.volumeDescBtn.clicked.connect(self.decreaseVolume)
         self.volumeIncBtn.clicked.connect(self.increaseVolume)
-
+        # self.enterSptBtn.clicked.connect(self.enter_Spotiy)
+        # self.enterYanBtn.clicked.connect(self.enter_Yandex)
         # playlist control button handlers
         self.prevBtn.clicked.connect(self.prevItemPlaylist)
         self.nextBtn.clicked.connect(self.nextItemPlaylist)
+
+    # def enter_Yandex(self):
+    #     pass
+
 
     def playHandler(self):
         self.userAction = 1
@@ -155,7 +147,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 pass
 
 
+# class Enter_Yandex(QDialog, Yam_Dialog):
+#     def __init__(self):
+#         super().__init__()
+#         self.setupUi(self)
+#         # self.pushButton.clicked.connect(self.)
+
+
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     ex = MainWindow()
+    ex.show()
     sys.exit(app.exec_())
