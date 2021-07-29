@@ -106,13 +106,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         elif self.player.state() == QMediaPlayer.PausedState:
             self.player.play()
 
-    # def init_player(self):
-    #     # print(args)
-    #     url = get_url_by_track(self.current_track_id, client)
-    #     content = QMediaContent(QtCore.QUrl(url))
-    #     self.player.setMedia(content)
-    #     self.player.setVolume(50)
-    #     self.player.play()
+    def init_player(self):
+        # print(args)
+        url = get_url_by_track(self.current_track_id, client)
+        content = QMediaContent(QtCore.QUrl(url))
+        self.player.setMedia(content)
+        self.player.setVolume(50)
+        self.player.play()
 
     def current_track(self, item: QListWidgetItem):
         self.current_track_id = item.data(256)
