@@ -1,10 +1,30 @@
 import sys
+import requests
+import yandex_api as ya
 
+from PyQt5 import QtCore
+from PyQt5 import QtWidgets
 from PyQt5.QtCore import QCoreApplication
-from PyQt5.QtWidgets import QApplication, QSlider, QMessageBox, QAction, QWidget, QMainWindow, QDialog
+from PyQt5.QtWidgets import QApplication, QSlider, QMessageBox, QAction, QWidget, QMainWindow, QDialog, QListWidget, QListWidgetItem
 from main_window import Ui_MainWindow
 from PyQt5.QtMultimedia import *
 from enter_yandex_music import Yam_Dialog
+
+
+client = ya.YandexClient()
+
+list_track = client.get_ru_chart().tracks
+
+
+class GetMusic(QtCore.QThread):
+    finised_signal = QtCore.pyqtSignal(str)
+
+    def __init__(self, url):
+        super().__init__()
+        self.url = url
+
+    def run(self):
+        self.finished_signal.emit(self.url)
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
@@ -22,7 +42,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.player.setVolume(60)
         self.setWindowTitle('Music Player')
         # Add Status bar
-        self.statusBar().showMessage('No Media :: %d' % self.player.volume())
+        self.statusBar().showMessage('No Media, Volume: %d' % self.player.volume())
         self.slider.setMinimum(0)
         self.slider.setMaximum(100)
         self.slider.setTracking(False)
@@ -32,15 +52,23 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.stopBtn.clicked.connect(self.stopHandler)
         self.volumeDescBtn.clicked.connect(self.decreaseVolume)
         self.volumeIncBtn.clicked.connect(self.increaseVolume)
-        # self.enterSptBtn.clicked.connect(self.enter_Spotiy)
-        # self.enterYanBtn.clicked.connect(self.enter_Yandex)
+        # self.enterSptBtn.clicked.connect(self.enter_Spotify)
+        self.enterYanBtn.clicked.connect(self.enter_Yandex)
         # playlist control button handlers
         self.prevBtn.clicked.connect(self.prevItemPlaylist)
         self.nextBtn.clicked.connect(self.nextItemPlaylist)
+        # self.get_music_thread = GetMusic(url=)
 
-    # def enter_Yandex(self):
-    #     pass
+        for track in list_track:
+            item = QListWidgetItem(str(track) + ' — ' + track.duration)
+            item.setData(256, track.id)
+            self.playlist_window.addItem(item)
 
+
+    def enter_Yandex(self):
+        a = Enter_Yandex()
+        a.show()
+        a.exec()
 
     def playHandler(self):
         self.userAction = 1
@@ -50,7 +78,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 # self.player.setMedia(QMediaContent(QUrl.fromLocalFile(self.currentFile)))
                 print(self.currentPlaylist.mediaCount())
                 if self.currentPlaylist.mediaCount() == 0:
-                    self.openFile()
+                    pass
                 if self.currentPlaylist.mediaCount() != 0:
                     self.player.setPlaylist(self.currentPlaylist)
             elif self.player.mediaStatus() == QMediaPlayer.LoadedMedia:
@@ -121,6 +149,20 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         vol = max(vol - 5, 0)
         self.player.setVolume(vol)
 
+    # def displaySongInfo(self):
+    #     metaDataKeyList = self.player.availableMetaData()
+    #     fullText = '<table class="tftable" border="0">'
+    #     for key in metaDataKeyList:
+    #         value = self.player.metaData(key)
+    #         fullText = fullText + '<tr><td>' + key + '</td><td>' + str(value) + '</td></tr>'
+    #     fullText = fullText + '</table>'
+    #     infoBox = QMessageBox(self)
+    #     infoBox.setWindowTitle('Detailed Song Information')
+    #     infoBox.setTextFormat(Qt.RichText)
+    #     infoBox.setText(fullText)
+    #     infoBox.addButton('OK', QMessageBox.AcceptRole)
+    #     infoBox.show()
+
     def prevItemPlaylist(self):
         self.player.playlist().previous()
 
@@ -147,11 +189,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 pass
 
 
-# class Enter_Yandex(QDialog, Yam_Dialog):
-#     def __init__(self):
-#         super().__init__()
-#         self.setupUi(self)
-#         # self.pushButton.clicked.connect(self.)
+class Enter_Yandex(QDialog, Yam_Dialog):
+    def __init__(self):
+        super().__init__()
+        self.setupUi(self)
+        self.log_pass()
+        self.pushButton.clicked.connect(self.log_pass)
+
+    def log_pass(self):
+        login = self.login_yan.text()
+        password = self.pass_yan.text()
+        login_and_password = (login, password)
 
 
 if __name__ == '__main__':
