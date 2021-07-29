@@ -12,8 +12,12 @@ from enter_yandex_music import Yam_Dialog
 
 
 client = ya.YandexClient()
-
 list_track = client.get_ru_chart().tracks
+
+
+def get_url_by_track(track_id, client_ya):
+    track = client_ya.track_by_id(track_id)
+    return track.download_link()
 
 
 class GetMusic(QtCore.QThread):
@@ -58,6 +62,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.prevBtn.clicked.connect(self.prevItemPlaylist)
         self.nextBtn.clicked.connect(self.nextItemPlaylist)
         # self.get_music_thread = GetMusic(url=)
+        self.current_track_id = '52608947:7413860'
 
         for track in list_track:
             item = QListWidgetItem(str(track) + ' — ' + track.duration)
@@ -78,17 +83,39 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 # self.player.setMedia(QMediaContent(QUrl.fromLocalFile(self.currentFile)))
                 print(self.currentPlaylist.mediaCount())
                 if self.currentPlaylist.mediaCount() == 0:
-                    pass
+                    print('1')
+                    url = get_url_by_track(self.current_track_id, client)
+                    print('2')
+                    self.get_music_thread = GetMusic(url)
+                    print('3')
+                    self.get_music_thread.finised_signal.connect(self.init_player)
+                    print('4')
+                    self.get_music_thread.start()
+                    print('5')
                 if self.currentPlaylist.mediaCount() != 0:
                     self.player.setPlaylist(self.currentPlaylist)
             elif self.player.mediaStatus() == QMediaPlayer.LoadedMedia:
-                self.player.play()
+                url = get_url_by_track(self.current_track_id, client)
+                self.get_music_thread = GetMusic(url)
+                self.get_music_thread.finised_signal.connect(self.init_player)
+                self.get_music_thread.start()
             elif self.player.mediaStatus() == QMediaPlayer.BufferedMedia:
                 self.player.play()
         elif self.player.state() == QMediaPlayer.PlayingState:
             pass
         elif self.player.state() == QMediaPlayer.PausedState:
             self.player.play()
+
+    # def init_player(self):
+    #     # print(args)
+    #     url = get_url_by_track(self.current_track_id, client)
+    #     content = QMediaContent(QtCore.QUrl(url))
+    #     self.player.setMedia(content)
+    #     self.player.setVolume(50)
+    #     self.player.play()
+
+    def current_track(self, item: QListWidgetItem):
+        self.current_track_id = item.data(256)
 
     def pauseHandler(self):
         self.userAction = 2
@@ -149,19 +176,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         vol = max(vol - 5, 0)
         self.player.setVolume(vol)
 
-    # def displaySongInfo(self):
-    #     metaDataKeyList = self.player.availableMetaData()
-    #     fullText = '<table class="tftable" border="0">'
-    #     for key in metaDataKeyList:
-    #         value = self.player.metaData(key)
-    #         fullText = fullText + '<tr><td>' + key + '</td><td>' + str(value) + '</td></tr>'
-    #     fullText = fullText + '</table>'
-    #     infoBox = QMessageBox(self)
-    #     infoBox.setWindowTitle('Detailed Song Information')
-    #     infoBox.setTextFormat(Qt.RichText)
-    #     infoBox.setText(fullText)
-    #     infoBox.addButton('OK', QMessageBox.AcceptRole)
-    #     infoBox.show()
+    def download(self):
+        pass
 
     def prevItemPlaylist(self):
         self.player.playlist().previous()
