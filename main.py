@@ -1,18 +1,27 @@
 import sys
 import requests
+import os
 import yandex_api as ya
 
-from PyQt5 import QtCore
+from PyQt5 import QtCore, QtGui
 from PyQt5 import QtWidgets
+from os.path import expanduser
 from PyQt5.QtCore import QCoreApplication
-from PyQt5.QtWidgets import QApplication, QSlider, QMessageBox, QAction, QWidget, QMainWindow, QDialog, QListWidget, QListWidgetItem
+from PyQt5.QtWidgets import QApplication, QSlider, QMessageBox, QAction, QMenu, QMainWindow, \
+                            QDialog, QAction, QListWidgetItem, QFileDialog, QListWidget
 from main_window import Ui_MainWindow
-from PyQt5.QtMultimedia import *
+from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent, QMediaPlaylist, QMediaMetaData, QAudio
 from enter_yandex_music import Yam_Dialog
 
 
-client = ya.YandexClient()
+LOGIN = os.getenv('username')
+print(LOGIN)
+PASSWORD = os.getenv('password')
+print(PASSWORD)
+
+client = ya.YandexClient((LOGIN, PASSWORD))
 list_track = client.get_ru_chart().tracks
+print(client.is_anonymous)
 
 
 def get_url_by_track(track_id, client_ya):
@@ -28,7 +37,8 @@ class GetMusic(QtCore.QThread):
         self.url = url
 
     def run(self):
-        self.finished_signal.emit(self.url)
+        r = requests.get(self.url)
+        self.finished_signal.emit(r)
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
@@ -51,38 +61,57 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.slider.setMaximum(100)
         self.slider.setTracking(False)
         self.slider.sliderMoved.connect(self.seekPosition)
-        self.playBtn.clicked.connect(self.playHandler)
-        self.pauseBtn.clicked.connect(self.pauseHandler)
-        self.stopBtn.clicked.connect(self.stopHandler)
-        self.volumeDescBtn.clicked.connect(self.decreaseVolume)
-        self.volumeIncBtn.clicked.connect(self.increaseVolume)
+        self.play_button.clicked.connect(self.playHandler)
+        self.pause_button.clicked.connect(self.pause_handler)
+        self.stop_button.clicked.connect(self.stop_handler)
+        self.volume_decrease_button.clicked.connect(self.decreaseVolume)
+        self.bolume_increase_button.clicked.connect(self.increaseVolume)
         # self.enterSptBtn.clicked.connect(self.enter_Spotify)
-        self.enterYanBtn.clicked.connect(self.enter_Yandex)
+        self.enter_yandex_button.clicked.connect(self.enter_yandex)
         # playlist control button handlers
-        self.prevBtn.clicked.connect(self.prevItemPlaylist)
-        self.nextBtn.clicked.connect(self.nextItemPlaylist)
+        self.prev_button.clicked.connect(self.prevItemPlaylist)
+        self.next_button.clicked.connect(self.nextItemPlaylist)
         # self.get_music_thread = GetMusic(url=)
         self.current_track_id = '52608947:7413860'
+        self.track_path = 'tracks/'
 
         for track in list_track:
             item = QListWidgetItem(str(track) + ' — ' + track.duration)
             item.setData(256, track.id)
             self.playlist_window.addItem(item)
 
+        self.playlist_window.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.playlist_window.customContextMenuRequested.connect(self.context_menu)
 
-    def enter_Yandex(self):
+    @staticmethod
+    def enter_yandex():
         a = Enter_Yandex()
         a.show()
         a.exec()
+
+    def context_menu(self):
+        menu = QMenu()
+        download_action = QAction('Скачать')
+        download_action.triggered.connect(self.download)
+        menu.addAction(download_action)
+        menu.exec(QtGui.QCursor.pos())
+
+    def double_click(self):
+        click = self.playlist_window.itemDoubleClicked(self.open_file)
+        return click()
+
+    def open_file(self):
+        print("Doubleclick")
 
     def playHandler(self):
         self.userAction = 1
         self.statusBar().showMessage('Playing at Volume %d' % self.player.volume())
         if self.player.state() == QMediaPlayer.StoppedState:
             if self.player.mediaStatus() == QMediaPlayer.NoMedia:
-                # self.player.setMedia(QMediaContent(QUrl.fromLocalFile(self.currentFile)))
+
                 print(self.currentPlaylist.mediaCount())
                 if self.currentPlaylist.mediaCount() == 0:
+                    pass
                     print('1')
                     url = get_url_by_track(self.current_track_id, client)
                     print('2')
@@ -117,19 +146,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def current_track(self, item: QListWidgetItem):
         self.current_track_id = item.data(256)
 
-    def pauseHandler(self):
+    def pause_handler(self):
         self.userAction = 2
-        self.statusBar().showMessage('Paused %s at position %s at Volume %d' % \
-                                     (self.player.metaData(QMediaMetaData.Title), \
-                                      self.centralWidget().layout().itemAt(0).layout().itemAt(0).widget().text(), \
+        self.statusBar().showMessage('Paused %s at position %s at Volume %d' %
+                                     (self.player.metaData(QMediaMetaData.Title),
+                                      self.centralWidget().layout().itemAt(0).layout().itemAt(0).widget().text(),
                                       self.player.volume()))
         self.player.pause()
 
-    def stopHandler(self):
+    def stop_handler(self):
         self.userAction = 0
         self.statusBar().showMessage('Stopped at Volume %d' % (self.player.volume()))
         if self.player.state() == QMediaPlayer.PlayingState:
-            self.stopState = True
+            self.stop_state = True
             self.player.stop()
         elif self.player.state() == QMediaPlayer.PausedState:
             self.player.stop()
@@ -148,12 +177,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self.player.state() == QMediaPlayer.StoppedState:
             self.player.stop()
 
-    def qmp_positionChanged(self, position, senderType=False):
-        sliderLayout = self.centralWidget().layout().itemAt(0).layout()
-        if senderType == False:
-            sliderLayout.itemAt(1).widget().setValue(position)
+    def qmp_positionChanged(self, position, sender_type=False):
+        slider_layout = self.centralWidget().layout().itemAt(0).layout()
+        if not sender_type:
+            slider_layout.itemAt(1).widget().setValue(position)
         # update the text label
-        sliderLayout.itemAt(0).widget().setText('%d:%02d' % (int(position / 60000), int((position / 1000) % 60)))
+        slider_layout.itemAt(0).widget().setText('%d:%02d' % (int(position / 60000), int((position / 1000) % 60)))
 
     def seekPosition(self, position):
         sender = self.sender()
@@ -177,7 +206,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.player.setVolume(vol)
 
     def download(self):
-        pass
+        cur_row = self.playlist_window.currentRow()
+        cur_track = self.playlist_window.item(cur_row)
+        self.current_track_id = cur_track.data(256)
+        track = client.track_by_id(self.current_track_id)
+        try:
+            track.download(f'{self.track_path}{str(track)}.mp3')
+        except Exception as e:
+            print(e)
 
     def prevItemPlaylist(self):
         self.player.playlist().previous()
@@ -185,15 +221,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def nextItemPlaylist(self):
         self.player.playlist().next()
 
-    def exitAction(self):
-        exitAc = QAction('&Exit', self)
-        exitAc.setShortcut('Ctrl+Q')
-        exitAc.setStatusTip('Exit App')
-        exitAc.triggered.connect(self.closeEvent)
-        return exitAc
+    def exit_action(self):
+        exit_ac = QAction('&Exit', self)
+        exit_ac.setStatusTip('Exit App')
+        exit_ac.triggered.connect(self.closeEvent)
+        return exit_ac
 
     def closeEvent(self, event):
-        reply = QMessageBox.question(self, 'Message', 'Pres Yes to Close.', QMessageBox.Yes | QMessageBox.No,
+        reply = QMessageBox.question(self, 'Message', 'Are you sure you want to exit?', QMessageBox.Yes | QMessageBox.No,
                                      QMessageBox.Yes)
 
         if reply == QMessageBox.Yes:
