@@ -4,7 +4,6 @@ import os
 import yandex_api as ya
 
 from PyQt5 import QtCore, QtGui
-from PyQt5 import QtWidget
 from PyQt5.QtCore import QCoreApplication, QUrl
 from PyQt5.QtWidgets import QApplication, QSlider, QMessageBox, QAction, QMenu, QMainWindow, \
                             QDialog, QAction, QListWidgetItem, QFileDialog, QListWidget
@@ -17,7 +16,7 @@ LOGIN = os.getenv('username')
 PASSWORD = os.getenv('password')
 
 client = ya.YandexClient((LOGIN, PASSWORD))
-list_track = client.get_ru_chart().tracks
+# list_track = client.get_ru_chart().tracks
 
 
 def get_url_by_track(track_id, client_ya):
@@ -50,8 +49,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.player.positionChanged.connect(self.position_changed)
         self.player.volumeChanged.connect(self.volume_changed)
         self.player.setVolume(60)
+        self.player.durationChanged.connect(self.set_duration)
         self.setWindowTitle('Music Player')
-        # Add Status bar
         self.statusBar().showMessage('No Media, Volume: %d' % self.player.volume())
         self.slider.setMinimum(0)
         self.slider.setMaximum(100)
@@ -64,18 +63,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.volume_increase_button.clicked.connect(self.increase_volume)
         self.downloaded_tracks.itemDoubleClicked.connect(self.open_file)
         self.enter_yandex_button.clicked.connect(self.enter_yandex)
-        # playlist control button handlers
         self.prev_button.clicked.connect(self.prevItemPlaylist)
         self.next_button.clicked.connect(self.nextItemPlaylist)
-        # self.get_music_thread = GetMusic(url=)
         self.current_track_id = '52608947:7413860'
         self.track_path = 'tracks/'
         self.fill_downloaded_tracks()
 
-        for track in list_track:
-            item = QListWidgetItem(str(track) + ' — ' + track.duration)
-            item.setData(256, track.id)
-            self.playlist_window.addItem(item)
+        # self.player.stateChanged.connect(self.handle_state_changed)
+
+
+        # for track in list_track:
+        #     item = QListWidgetItem(str(track) + ' — ' + track.duration)
+        #     item.setData(256, track.id)
+        #     self.playlist_window.addItem(item)
 
         self.playlist_window.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.playlist_window.customContextMenuRequested.connect(self.context_menu)
@@ -93,13 +93,32 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         menu.addAction(download_action)
         menu.exec(QtGui.QCursor.pos())
 
+    def set_duration(self):
+        duration = self.player.duration()
+        seconds = duration // 1000
+        minutes = seconds // 60
+        seconds -= minutes * 60
+        s_seconds = str(seconds) if seconds >= 10 else '0' + str(seconds)
+        s_minutes = str(minutes) if minutes >= 10 else '0' + str(minutes)
+        self.slider_label_2.setText(f'{s_minutes}:{s_seconds}')
+
+    def handle_state_changed(self, state):
+        if state == QMediaPlayer.PlayingState:
+            print("started")
+        elif state == QMediaPlayer.StoppedState:
+            print("finished")
+
+
     def open_file(self, item):
         try:
             track_name = item.text()
-            full_file_path = os.path.join(os.getcwd(), f'/tracks/{track_name}')
+            full_file_path = os.path.join(os.getcwd(), f'tracks/{track_name}')
             url = QUrl.fromLocalFile(full_file_path)
+            print(url.url(), url)
             content = QMediaContent(url)
-            self.current_playlist.addMedia(content)
+            self.current_playlist.loaded.connect(self.play_handler)
+            print(self.current_playlist.addMedia(content))
+            print(self.current_playlist.media(0).request() )
         except Exception as e:
             print(e)
 
@@ -108,17 +127,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.statusBar().showMessage('Playing at Volume %d' % self.player.volume())
         if self.player.state() == QMediaPlayer.StoppedState:
             if self.player.mediaStatus() == QMediaPlayer.NoMedia:
+                # self.player.setMedia(QMediaContent(QUrl.fromLocalFile(self.currentFile)))
                 print(self.current_playlist.mediaCount())
-                if self.player.mediaStatus() == QMediaPlayer.NoMedia:
-                    # self.player.setMedia(QMediaContent(QUrl.fromLocalFile(self.currentFile)))
-                    print(self.current_playlist.mediaCount())
-                    if self.current_playlist.mediaCount() == 0:
-                        print('222')
-                    if self.current_playlist.mediaCount() != 0:
-                        try:
-                            self.player.setPlaylist(self.current_playlist)
-                        except Exception as e:
-                            print(e)
+                if self.current_playlist.mediaCount() == 0:
+                    pass
+                if self.current_playlist.mediaCount() != 0:
+                    self.player.setPlaylist(self.current_playlist)
+                    self.player.play()
             elif self.player.mediaStatus() == QMediaPlayer.LoadedMedia:
                 self.player.play()
             elif self.player.mediaStatus() == QMediaPlayer.BufferedMedia:
@@ -127,15 +142,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             pass
         elif self.player.state() == QMediaPlayer.PausedState:
             self.player.play()
-
-        # try:
-        #     self.player.setPlaylist(self.current_playlist)
-        # except Exception as e:
-        #     print(e)
-        # try:
-        #     self.player.play()
-        # except Exception as e:
-        #     print(e)
 
     def init_player(self):
         # print(args)
@@ -150,10 +156,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def pause_handler(self):
         self.userAction = 2
-        self.statusBar().showMessage('Paused %s at position %s at Volume %d' %
-                                     (self.player.metaData(QMediaMetaData.Title),
-                                      self.centralWidget().layout().itemAt(0).layout().itemAt(0).widget().text(),
-                                      self.player.volume()))
+        self.statusBar().showMessage('Paused at Volume %d' % (self.player.volume()))
         self.player.pause()
 
     def stop_handler(self):
@@ -170,21 +173,39 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def media_status_changed(self):
         if self.player.mediaStatus() == QMediaPlayer.LoadedMedia and self.userAction == 1:
             durationT = self.player.duration()
-            self.centralWidget().layout().itemAt(0).layout().itemAt(1).widget().setRange(0, durationT)
-            self.centralWidget().layout().itemAt(0).layout().itemAt(2).widget().setText(
-                '%d:%02d' % (int(durationT / 60000), int((durationT / 1000) % 60)))
+            print(durationT)
+            self.slider_label_1.setText(durationT)
+            # self.centralwidget.layout().itemAt(0).layout().itemAt(1).widget().setRange(0, durationT)
+            # self.centralwidget.layout().itemAt(0).layout().itemAt(2).widget().setText(
+            #     '%d:%02d' % (int(durationT / 60000), int((durationT / 1000) % 60)))
             self.player.play()
 
     def state_changed(self):
-        if self.player.state() == QMediaPlayer.StoppedState:
+        if self.player.state() == QMediaPlayer.PausedState:
+            self.player.pause()
+            print('545454')
+        elif self.player.state() == QMediaPlayer.StoppedState:
             self.player.stop()
+            print('46868579')
+        elif self.player.state() == QMediaPlayer.PlayingState:
+            print('210')
+            # self.player.currentMedia()
+            # duration = self.player.duration()
+            # print(duration)
+            # self.slider_label_2.setText(str(duration))
 
     def position_changed(self, position, sender_type=False):
-        slider_layout = self.centralWidget().layout().itemAt(0).layout()
+        track_percent = 0
+        if self.player.duration():
+            track_percent = position/self.player.duration()*100
         if not sender_type:
-            slider_layout.itemAt(1).widget().setValue(position)
-        # update the text label
-        slider_layout.itemAt(0).widget().setText('%d:%02d' % (int(position / 60000), int((position / 1000) % 60)))
+            self.slider.setValue(track_percent)
+        seconds = position // 1000
+        minutes = seconds // 60
+        seconds -= minutes * 60
+        s_seconds = str(seconds) if seconds >= 10 else '0' + str(seconds)
+        s_minutes = str(minutes) if minutes >= 10 else '0' + str(minutes)
+        self.slider_label_1.setText(f'{s_minutes}:{s_seconds}')
 
     def seek_position(self, position):
         sender = self.sender()
@@ -212,10 +233,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         cur_track = self.playlist_window.item(cur_row)
         self.current_track_id = cur_track.data(256)
         track = client.track_by_id(self.current_track_id)
-        try:
-            track.download(f'{self.track_path}{str(track)}.mp3')
-        except Exception as e:
-            print(e)
+        track.download(f'{self.track_path}{str(track)}.mp3')
 
     def fill_downloaded_tracks(self):
         list_downloaded_tracks = os.listdir(self.track_path)
