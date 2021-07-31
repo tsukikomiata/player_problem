@@ -5,7 +5,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(1011, 600)
+        MainWindow.resize(1011, 575)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.lineEdit = QtWidgets.QLineEdit(self.centralwidget)
@@ -91,8 +91,8 @@ class Ui_MainWindow(object):
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
-        self.slider_label_1.setText(_translate("MainWindow", "0:00"))
-        self.slider_label_2.setText(_translate("MainWindow", "0:00"))
+        self.slider_label_1.setText(_translate("MainWindow", "00:00"))
+        self.slider_label_2.setText(_translate("MainWindow", "00:00"))
         self.volume_decrease_button.setText(_translate("MainWindow", "V (-)"))
         self.play_button.setText(_translate("MainWindow", "Play"))
         self.pause_button.setText(_translate("MainWindow", "Pause"))

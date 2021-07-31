@@ -16,7 +16,7 @@ LOGIN = os.getenv('username')
 PASSWORD = os.getenv('password')
 
 client = ya.YandexClient((LOGIN, PASSWORD))
-list_track = client.get_ru_chart().tracks
+# list_track = client.get_ru_chart().tracks
 
 
 def get_url_by_track(track_id, client_ya):
@@ -55,10 +55,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.fill_downloaded_tracks()
         self.search_button.clicked.connect(self.search)
 
-        for track in list_track:
-            item = QListWidgetItem(str(track) + ' — ' + track.duration)
-            item.setData(256, track.id)
-            self.playlist_window.addItem(item)
+        # for track in list_track:
+        #     item = QListWidgetItem(str(track) + ' — ' + track.duration)
+        #     item.setData(256, track.id)
+        #     self.playlist_window.addItem(item)
 
         self.playlist_window.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.playlist_window.customContextMenuRequested.connect(self.context_menu)
@@ -139,7 +139,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self.player.state() == QMediaPlayer.StoppedState:
             if self.player.mediaStatus() == QMediaPlayer.NoMedia:
                 if self.current_playlist.mediaCount() == 0:
-                    pass
+                    error = QMessageBox()
+                    error.setWindowTitle('Ошибка')
+                    error.setText('Трек не выбран')
+                    error.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+                    error.exec_()
                 if self.current_playlist.mediaCount() != 0:
                     self.player.setPlaylist(self.current_playlist)
                     self.player.play()
