@@ -16,7 +16,8 @@ LOGIN = os.getenv('username')
 PASSWORD = os.getenv('password')
 
 client = ya.YandexClient((LOGIN, PASSWORD))
-list_track = client.get_ru_chart().tracks
+# list_track = client.get_ru_chart().tracks
+list_track = list()
 
 
 def get_url_by_track(track_id, client_ya):
@@ -238,7 +239,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             error = QMessageBox()
             error.setWindowTitle('Ошибка')
             error.setText('Вы не авторизированы')
-            error.setStandardButtons(QMessageBox.Ok|QMessageBox.Cancel)
+            error.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
             error.exec_()
         else:
             cur_row = self.playlist_window.currentRow()
@@ -295,7 +296,7 @@ class EnterYandex(QDialog, Yam_Dialog):
             error = QMessageBox()
             error.setWindowTitle('Ошибка')
             error.setText('Неверно введен логин или пароль')
-            error.setStandardButtons(QMessageBox.Ok|QMessageBox.Cancel)
+            error.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
             error.exec_()
         else:
             self.close()
