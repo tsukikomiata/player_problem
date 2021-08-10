@@ -16,7 +16,8 @@ LOGIN = os.getenv('username')
 PASSWORD = os.getenv('password')
 
 client = ya.YandexClient((LOGIN, PASSWORD))
-list_track = client.get_ru_chart().tracks
+# list_track = client.get_ru_chart().tracks
+list_track = list()
 
 
 def get_url_by_track(track_id, client_ya):
@@ -62,9 +63,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.playlist_window.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.playlist_window.customContextMenuRequested.connect(self.context_menu)
+        self.playlist_window.itemDoubleClicked.connect(self.add_online_song)
 
         self.search_results.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.search_results.customContextMenuRequested.connect(self.context_menu_search)
+        self.search_results.itemDoubleClicked.connect(self.add_online_song)
 
     def enter_yandex(self):
         a = EnterYandex()
@@ -115,6 +118,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             track = client.track_by_id(self.current_track_id)
             track.download(f'{self.track_path}{str(track)}.mp3')
             self.fill_downloaded_tracks()
+
+    def add_online_song(self, item):
+        track_id = item.data(256)
+        url = get_url_by_track(track_id, client)
+        url = QUrl(url)
+        content = QMediaContent(url)
+        self.current_playlist.loaded.connect(self.play_handler)
+        self.current_playlist.addMedia(content)
 
     def set_duration(self):
         duration = self.player.duration()
@@ -228,7 +239,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             error = QMessageBox()
             error.setWindowTitle('Ошибка')
             error.setText('Вы не авторизированы')
-            error.setStandardButtons(QMessageBox.Ok|QMessageBox.Cancel)
+            error.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
             error.exec_()
         else:
             cur_row = self.playlist_window.currentRow()
@@ -285,7 +296,7 @@ class EnterYandex(QDialog, Yam_Dialog):
             error = QMessageBox()
             error.setWindowTitle('Ошибка')
             error.setText('Неверно введен логин или пароль')
-            error.setStandardButtons(QMessageBox.Ok|QMessageBox.Cancel)
+            error.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
             error.exec_()
         else:
             self.close()
